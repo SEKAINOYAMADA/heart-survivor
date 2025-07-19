@@ -6,13 +6,13 @@ body {
     justify-content: center; /* Center vertically */
     align-items: center; /* Center horizontally */
     min-height: 100vh;
-    background-color: #87CEEB;
+    background-color: black; /* Changed to black */
     font-family: 'Arial', sans-serif;
     color: #fff;
 }
 
 pre {
-    background-color: yellow; /* Debugging color: Make game area clearly visible */
+    background-color: black; /* Changed to black */
     border: 2px solid #fff;
     display: block;
     font-family: monospace;
@@ -22,6 +22,7 @@ pre {
     width: 480px; /* 60 chars * 8px/char */
     height: 120px; /* 15 lines * 8px/line */
     box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    color: white; /* Set text color to white */
 }
 
 #scoreDisplay {
