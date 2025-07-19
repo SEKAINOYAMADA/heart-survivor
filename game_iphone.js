@@ -18,6 +18,7 @@ let score = 0;
 let highScore = localStorage.getItem('skyhighRunnerHighScore') || 0;
 let gameSpeed;
 let gameOver = false;
+let gameStarted = false; // ゲームが開始されたかどうかのフラグ
 let comboCounter = 0;
 let invincibleTimer = 0;
 
@@ -26,7 +27,7 @@ const GRAVITY = 0.06; // 重力を下げてふわっとさせる
 class Player {
     constructor() {
         this.x = 10;
-        this.y = HEIGHT - 2;
+        this.y = HEIGHT - 5; // 初期位置を少し高くする
         this.width = 1;
         this.height = 1;
         this.velocityY = 0;
@@ -201,6 +202,7 @@ function init() {
     score = 0;
     gameSpeed = 0.6;
     gameOver = false;
+    gameStarted = false; // ゲーム開始前はfalse
     comboCounter = 0;
     invincibleTimer = 0;
 
@@ -212,7 +214,52 @@ function init() {
     gameOverScreen.classList.add('hidden');
     scoreDisplay.textContent = `Score: ${score}`;
     highScoreDisplay.textContent = `High Score: ${highScore}`;
-    gameLoop();
+
+    // ゲーム説明画面を表示
+    drawExplanationScreen();
+}
+
+function drawExplanationScreen() {
+    const grid = Array(HEIGHT).fill(null).map(() => Array(WIDTH).fill(' '));
+
+    const messages = [
+        "Press SPACE or Tap to Jump",
+        "ArrowDown or Left Tap to Fast Fall",
+        "",
+        "P: Player",
+        "X: Obstacle",
+        "o: Coin (+10 Score)",
+        "*: Gem (+100 Score)",
+        ">: Speed Up",
+        "<: Speed Down",
+        "I: Invincible",
+        "",
+        "Tap or Press any key to Start!"
+    ];
+
+    let startRow = Math.floor((HEIGHT - messages.length) / 2);
+    if (startRow < 0) startRow = 0;
+
+    messages.forEach((msg, index) => {
+        const row = startRow + index;
+        const startCol = Math.floor((WIDTH - msg.length) / 2);
+        if (row >= 0 && row < HEIGHT) {
+            for (let i = 0; i < msg.length; i++) {
+                const col = startCol + i;
+                if (col >= 0 && col < WIDTH) {
+                    grid[row][col] = msg[i];
+                }
+            }
+        }
+    });
+
+    gameScreen.textContent = grid.map(row => row.join('')).join('\n');
+}
+
+function startGame() {
+    if (gameStarted) return; // 既に開始済みなら何もしない
+    gameStarted = true;
+    gameLoop(); // ゲームループを開始
 }
 
 function generateContent() {
@@ -248,7 +295,7 @@ function generateContent() {
 }
 
 function gameLoop() {
-    if (gameOver) return;
+    if (gameOver || !gameStarted) return; // ゲームが開始されていない場合は更新しない
     update();
     draw();
     requestAnimationFrame(gameLoop);
@@ -370,8 +417,6 @@ function draw() {
         grid[playerY][playerX] = invincibleTimer > 0 && invincibleTimer % 10 < 5 ? 'P' : player.draw();
     }
 
-    grid[0][0] = 'T'; // Place a 'T' at top-left corner for debugging
-
     gameScreen.textContent = grid.map(row => row.join('')).join('\n');
 }
 
@@ -388,11 +433,23 @@ function endGame() {
 
 document.addEventListener('keydown', (e) => {
     if (gameOver) return;
+    if (!gameStarted) { // ゲーム開始前ならゲームを開始
+        startGame();
+        return;
+    }
     if (e.code === 'Space') {
         player.jump();
     }
     if (e.code === 'ArrowDown') {
         player.fastFall();
+    }
+});
+
+document.addEventListener('touchstart', (e) => {
+    if (gameOver) return;
+    if (!gameStarted) { // ゲーム開始前ならゲームを開始
+        startGame();
+        return;
     }
 });
 
@@ -408,6 +465,10 @@ if (touchJumpArea) {
     touchJumpArea.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (gameOver) return;
+        if (!gameStarted) { // ゲーム開始前ならゲームを開始
+            startGame();
+            return;
+        }
         player.jump();
     });
 }
@@ -416,6 +477,10 @@ if (touchFallArea) {
     touchFallArea.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (gameOver) return;
+        if (!gameStarted) { // ゲーム開始前ならゲームを開始
+            startGame();
+            return;
+        }
         player.fastFall();
     });
 }
