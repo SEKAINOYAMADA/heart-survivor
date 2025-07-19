@@ -7,6 +7,7 @@ const restartButton = document.getElementById('restartButton');
 
 const WIDTH = 60;
 const HEIGHT = 15;
+const PLATFORM_BASE_Y = HEIGHT - 4; // プラットフォームの基準となるY座標
 
 let player;
 let platforms = [];
@@ -27,7 +28,7 @@ const GRAVITY = 0.06; // 重力を下げてふわっとさせる
 class Player {
     constructor() {
         this.x = 10;
-        this.y = HEIGHT - 5; // 初期位置を少し高くする
+        this.y = PLATFORM_BASE_Y - 1; // プラットフォームの少し上に配置
         this.width = 1;
         this.height = 1;
         this.velocityY = 0;
@@ -55,8 +56,8 @@ class Player {
         this.velocityY += GRAVITY;
 
         // 地面（画面下部）に着地した際の処理
-        if (this.y >= HEIGHT - 1) {
-            this.y = HEIGHT - 1;
+        if (this.y >= PLATFORM_BASE_Y) { // プラットフォームの基準Y座標に着地
+            this.y = PLATFORM_BASE_Y;
             this.velocityY = 0;
             if (this.isJumping) {
                 createParticles(this.x, this.y + 1, 5, '.');
@@ -194,7 +195,7 @@ function createParticles(x, y, count, char) {
 
 function init() {
     player = new Player();
-    platforms = [new Platform(0, HEIGHT - 1, WIDTH)];
+    platforms = [new Platform(0, PLATFORM_BASE_Y, WIDTH)]; // 初期プラットフォームのY座標を調整
     items = [];
     obstacles = [];
     particles = [];
@@ -267,7 +268,7 @@ function generateContent() {
     if (lastPlatform.x + lastPlatform.width < WIDTH + 20) {
         const width = Math.floor(Math.random() * 15) + 8;
         const x = lastPlatform.x + lastPlatform.width + Math.floor(Math.random() * 8) + 5;
-        const y = HEIGHT - 1 - Math.floor(Math.random() * 4);
+        const y = PLATFORM_BASE_Y - Math.floor(Math.random() * 2); // プラットフォームのY座標を調整
         platforms.push(new Platform(x, y, width));
 
         if (Math.random() < 0.4) {
@@ -329,7 +330,7 @@ function update() {
         }
     });
 
-    if (player.y >= HEIGHT - 1 && !onPlatform) {
+    if (player.y >= HEIGHT - 1 && !onPlatform) { // ゲームオーバー条件を画面最下部に変更
         endGame();
     }
 
