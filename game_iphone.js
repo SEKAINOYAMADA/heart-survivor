@@ -447,7 +447,7 @@ document.addEventListener('touchstart', (e) => {
     }
 });
 
-restartButton.addEventListener('click', init;
+restartButton.addEventListener('click', init);
 
 init();
 
