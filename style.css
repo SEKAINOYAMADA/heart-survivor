@@ -3,12 +3,23 @@ body {
     text-align: center;
     background-color: #000;
     color: #fff;
+    display: flex; /* Use flexbox for overall layout */
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
+    min-height: 100vh; /* Ensure body takes full viewport height */
+    margin: 0;
+}
+
+h1 {
+    margin-top: 20px;
 }
 
 #gameCanvas {
     background-color: #000;
     border: 2px solid #fff;
     cursor: pointer;
+    display: block; /* Ensure it behaves as a block element for margin auto */
+    margin: 20px auto; /* Center the canvas horizontally */
 }
 
 #score {
@@ -32,7 +43,7 @@ button {
     padding: 10px 20px;
     font-size: 14px;
     cursor: pointer;
-    margin: 5px;
+    margin: 5px; /* Adjust margin for better spacing */
 }
 
 button:hover {
@@ -43,7 +54,7 @@ button:hover {
     margin-top: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: center; /* Center the control buttons horizontally */
 }
 
 .control-row {
@@ -52,10 +63,20 @@ button:hover {
 }
 
 #touchControls button {
-    width: 60px;
-    height: 60px;
-    font-size: 24px;
+    width: 70px; /* Slightly larger buttons */
+    height: 70px;
+    font-size: 28px; /* Larger font for symbols */
     display: flex;
     justify-content: center;
     align-items: center;
+    margin: 5px; /* Consistent margin */
+}
+
+/* Specific adjustments for the layout of buttons */
+#upButton, #downButton {
+    margin: 5px auto; /* Center single buttons in their row */
+}
+
+#leftButton, #rightButton {
+    margin: 5px;
 }
