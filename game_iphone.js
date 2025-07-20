@@ -60,7 +60,7 @@ class Player {
     }
 
     jump() {
-        if (this.jumpsLeft > 0) {
+        if (this.jumpsLeft > 0 && !gameOver) { // ゲームオーバー時はジャンプ不可
             if (this.jumpsLeft === 2) { // 1段目のジャンプ
                 this.velocityY = this.jumpStrength;
             } else { // 2段目のジャンプ
@@ -73,7 +73,7 @@ class Player {
     }
 
     fastFall() {
-        if (this.isJumping) {
+        if (this.isJumping && !gameOver) { // ゲームオーバー時は落下不可
             this.velocityY = Math.max(this.velocityY, 0.5);
         }
     }
@@ -415,6 +415,7 @@ function draw() {
 
 function endGame() {
     gameOver = true;
+    gameStarted = false; // ゲームオーバー時にゲームを停止
     finalScoreDisplay.textContent = score;
     if (score > highScore) {
         highScore = score;
@@ -446,7 +447,7 @@ document.addEventListener('touchstart', (e) => {
     }
 });
 
-restartButton.addEventListener('click', init);
+restartButton.addEventListener('click', init;
 
 init();
 
