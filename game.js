@@ -6,6 +6,11 @@ const gameOverElement = document.getElementById('gameOver');
 const finalScoreElement = document.getElementById('finalScore');
 const startButton = document.getElementById('startButton');
 const restartButton = document.getElementById('restartButton');
+const touchControlsElement = document.getElementById('touchControls');
+const upButton = document.getElementById('upButton');
+const downButton = document.getElementById('downButton');
+const leftButton = document.getElementById('leftButton');
+const rightButton = document.getElementById('rightButton');
 
 // Game settings
 const canvasWidth = 250;
@@ -20,6 +25,10 @@ let touchStartX = null;
 let touchStartY = null;
 let gameRunning = false;
 
+function isMobile() {
+    return /Mobi|Android/i.test(navigator.userAgent);
+}
+
 function setupInitialScreen() {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
@@ -27,6 +36,9 @@ function setupInitialScreen() {
     gameOverElement.style.display = 'none';
     scoreElement.style.display = 'none';
     canvas.style.display = 'none';
+    if (isMobile()) {
+        touchControlsElement.style.display = 'none'; // Hide controls on start screen
+    }
 }
 
 function init() {
@@ -50,6 +62,9 @@ function init() {
     gameOverElement.style.display = 'none';
     scoreElement.style.display = 'block';
     canvas.style.display = 'block';
+    if (isMobile()) {
+        touchControlsElement.style.display = 'flex'; // Show controls on mobile
+    }
     scoreElement.textContent = 'Score: 0';
 
     if (obstacleInterval) clearInterval(obstacleInterval);
@@ -139,8 +154,10 @@ restartButton.addEventListener('click', setupInitialScreen);
 window.addEventListener('keydown', (e) => { keys[e.key] = true; });
 window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
+// Touch controls for drag movement
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    if (!gameRunning) return; // Only allow drag if game is running
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     touchStartX = touch.clientX - rect.left;
@@ -149,7 +166,7 @@ canvas.addEventListener('touchstart', (e) => {
 
 canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
-    if (touchStartX === null) return;
+    if (touchStartX === null || !gameRunning) return;
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     const currentX = touch.clientX - rect.left;
@@ -161,6 +178,36 @@ canvas.addEventListener('touchmove', (e) => {
 });
 
 canvas.addEventListener('touchend', (e) => { e.preventDefault(); touchStartX = null; touchStartY = null; });
+
+// Touch controls for buttons
+function setupButtonListeners(button, key) {
+    button.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (!gameRunning) return;
+        keys[key] = true;
+    });
+    button.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+    });
+    button.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (!gameRunning) return;
+        keys[key] = true;
+    });
+    button.addEventListener('mouseup', (e) => {
+        e.preventDefault();
+        keys[key] = false;
+    });
+    button.addEventListener('mouseleave', (e) => { // For desktop mouse drag off button
+        if (keys[key]) keys[key] = false;
+    });
+}
+
+setupButtonListeners(upButton, 'w');
+setupButtonListeners(downButton, 's');
+setupButtonListeners(leftButton, 'a');
+setupButtonListeners(rightButton, 'd');
 
 function spawnObstacle() {
     let x, y, radius = 4;
@@ -219,6 +266,9 @@ function endGame() {
     gameOverElement.style.display = 'block';
     canvas.style.display = 'none';
     scoreElement.style.display = 'none';
+    if (isMobile()) {
+        touchControlsElement.style.display = 'none';
+    }
     clearInterval(obstacleInterval);
     clearInterval(specialWallInterval);
 }
