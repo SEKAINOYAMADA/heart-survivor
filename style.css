@@ -3,10 +3,10 @@ body {
     text-align: center;
     background-color: #000;
     color: #fff;
-    display: flex; /* Use flexbox for overall layout */
+    display: flex;
     flex-direction: column;
-    align-items: center; /* Center content horizontally */
-    min-height: 100vh; /* Ensure body takes full viewport height */
+    align-items: center;
+    min-height: 100vh;
     margin: 0;
 }
 
@@ -18,8 +18,8 @@ h1 {
     background-color: #000;
     border: 2px solid #fff;
     cursor: pointer;
-    display: block; /* Ensure it behaves as a block element for margin auto */
-    margin: 20px auto; /* Center the canvas horizontally */
+    display: block;
+    margin: 20px auto;
 }
 
 #score {
@@ -31,7 +31,6 @@ h1 {
     margin-top: 20px;
 }
 
-/* Ensure all text elements use the pixel font */
 h1, p, span, div, button {
     font-family: 'Press Start 2P', cursive;
 }
@@ -43,7 +42,6 @@ button {
     padding: 10px 20px;
     font-size: 14px;
     cursor: pointer;
-    margin: 5px; /* Adjust margin for better spacing */
 }
 
 button:hover {
@@ -54,29 +52,24 @@ button:hover {
     margin-top: 20px;
     display: flex;
     flex-direction: column;
-    align-items: center; /* Center the control buttons horizontally */
+    align-items: center;
+    width: 250px; /* Match canvas width */
+    margin: 20px auto; /* Center the controls block */
 }
 
 .control-row {
     display: flex;
-    justify-content: center;
+    width: 100%; /* Take full width of #touchControls */
+    justify-content: space-around; /* Distribute space evenly */
+    margin-bottom: 10px; /* Space between rows */
 }
 
 #touchControls button {
-    width: 70px; /* Slightly larger buttons */
+    width: 70px;
     height: 70px;
-    font-size: 28px; /* Larger font for symbols */
+    font-size: 28px;
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 5px; /* Consistent margin */
-}
-
-/* Specific adjustments for the layout of buttons */
-#upButton, #downButton {
-    margin: 5px auto; /* Center single buttons in their row */
-}
-
-#leftButton, #rightButton {
-    margin: 5px;
+    margin: 0; /* Remove individual button margin if using space-around/between */
 }
