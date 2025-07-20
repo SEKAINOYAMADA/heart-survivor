@@ -55,16 +55,8 @@ class Player {
         this.y += this.velocityY;
         this.velocityY += GRAVITY;
 
-        // 地面（画面下部）に着地した際の処理
-        if (this.y >= PLATFORM_BASE_Y) { // プラットフォームの基準Y座標に着地
-            this.y = PLATFORM_BASE_Y;
-            this.velocityY = 0;
-            if (this.isJumping) {
-                createParticles(this.x, this.y + 1, 5, '.');
-            }
-            this.isJumping = false;
-            this.jumpsLeft = 2;
-        }
+        // プレイヤーが画面下部に落ちた場合の処理は、メインのupdate関数で処理される
+        // ここでは重力による落下のみを処理
     }
 
     jump() {
