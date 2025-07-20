@@ -155,29 +155,30 @@ window.addEventListener('keydown', (e) => { keys[e.key] = true; });
 window.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
 // Touch controls for drag movement
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (!gameRunning) return; // Only allow drag if game is running
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    touchStartX = touch.clientX - rect.left;
-    touchStartY = touch.clientY - rect.top;
-});
+// Touch controls for drag movement
+// canvas.addEventListener('touchstart', (e) => {
+//     e.preventDefault();
+//     if (!gameRunning) return; // Only allow drag if game is running
+//     const touch = e.touches[0];
+//     const rect = canvas.getBoundingClientRect();
+//     touchStartX = touch.clientX - rect.left;
+//     touchStartY = touch.clientY - rect.top;
+// });
 
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if (touchStartX === null || !gameRunning) return;
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const currentX = touch.clientX - rect.left;
-    const currentY = touch.clientY - rect.top;
-    player.x += currentX - touchStartX;
-    player.y += currentY - touchStartY;
-    touchStartX = currentX;
-    touchStartY = currentY;
-});
+// canvas.addEventListener('touchmove', (e) => {
+//     e.preventDefault();
+//     if (touchStartX === null || !gameRunning) return;
+//     const touch = e.touches[0];
+//     const rect = canvas.getBoundingClientRect();
+//     const currentX = touch.clientX - rect.left;
+//     const currentY = touch.clientY - rect.top;
+//     player.x += currentX - touchStartX;
+//     player.y += currentY - touchStartY;
+//     touchStartX = currentX;
+//     touchStartY = currentY;
+// });
 
-canvas.addEventListener('touchend', (e) => { e.preventDefault(); touchStartX = null; touchStartY = null; });
+// canvas.addEventListener('touchend', (e) => { e.preventDefault(); touchStartX = null; touchStartY = null; });
 
 // Touch controls for buttons
 function setupButtonListeners(button, key) {
