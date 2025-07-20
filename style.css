@@ -8,13 +8,32 @@ body {
 #gameCanvas {
     background-color: #000;
     border: 2px solid #fff;
+    cursor: pointer;
 }
 
 #score {
-    font-size: 24px;
-    margin-top: 10px;
+    font-size: 16px; /* Adjusted for pixel font */
+    margin: 10px 0;
 }
 
-#gameOver {
+#gameOver, #startScreen {
     margin-top: 20px;
+}
+
+/* Ensure all text elements use the pixel font */
+h1, p, span, div, button {
+    font-family: 'Press Start 2P', cursive;
+}
+
+button {
+    background-color: #fff;
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #ccc;
 }
