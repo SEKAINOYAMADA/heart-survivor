@@ -1,278 +1,471 @@
+"use strict";
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const scoreElement = document.getElementById('score');
-const startScreenElement = document.getElementById('startScreen');
-const gameOverElement = document.getElementById('gameOver');
-const finalScoreElement = document.getElementById('finalScore');
-const startButton = document.getElementById('startButton');
-const restartButton = document.getElementById('restartButton');
-const touchControlsElement = document.getElementById('touchControls');
-const upButton = document.getElementById('upButton');
-const downButton = document.getElementById('downButton');
-const leftButton = document.getElementById('leftButton');
-const rightButton = document.getElementById('rightButton');
 
-// Game settings
-const canvasWidth = 250;
-const canvasHeight = 250;
+// --- Game Configuration ---
+const STAGE_WIDTH = 800;
+const STAGE_HEIGHT = 600;
+canvas.width = STAGE_WIDTH;
+canvas.height = STAGE_HEIGHT;
 
-canvas.width = canvasWidth;
-canvas.height = canvasHeight;
+const FONT_FAMILY = "'DotGothic16', sans-serif";
+const HEART_LIFESPAN = 10; // seconds
 
-let player, obstacles, specialWalls, score, gameOver, gameLoopId, obstacleInterval, specialWallInterval;
-let keys = {};
-let touchStartX = null;
-let touchStartY = null;
-let gameRunning = false;
+const COLORS = {
+    RED: '#FF5555',
+    BLUE: '#5555FF',
+    WHITE: '#FFFFFF',
+    BLACK: '#000000',
+    RED_AREA: 'rgba(255, 85, 85, 0.2)',
+    BLUE_AREA: 'rgba(85, 85, 255, 0.2)',
+};
 
-function isMobile() {
-    return /Mobi|Android/i.test(navigator.userAgent);
+// --- Helper Functions ---
+function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
 }
 
-function setupInitialScreen() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    startScreenElement.style.display = 'block';
-    gameOverElement.style.display = 'none';
-    scoreElement.style.display = 'none';
-    canvas.style.display = 'none';
-    if (isMobile()) {
-        touchControlsElement.style.display = 'none'; // Hide controls on start screen
+function getRandomColor() {
+    return Math.random() < 0.5 ? COLORS.RED : COLORS.BLUE;
+}
+
+
+// --- Classes ---
+
+class Heart {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.size = 20;
+        this.vx = getRandom(-1, 1);
+        this.vy = getRandom(-1, 1);
+        this.isHeld = false;
+        this.safe = false;
+        this.createdAt = Date.now();
+        this.lifespan = HEART_LIFESPAN * 1000;
     }
-}
 
-function init() {
-    player = {
-        x: canvasWidth / 2,
-        y: canvasHeight / 2,
-        radius: 6,
-        size: 10,
-        speed: 3
-    };
-    obstacles = [];
-    specialWalls = [];
-    score = 0;
-    gameOver = false;
-    gameRunning = true;
-    keys = {};
-    touchStartX = null;
-    touchStartY = null;
-
-    startScreenElement.style.display = 'none';
-    gameOverElement.style.display = 'none';
-    scoreElement.style.display = 'block';
-    canvas.style.display = 'block';
-    if (isMobile()) {
-        touchControlsElement.style.display = 'flex'; // Show controls on mobile
+    getRemainingTime() {
+        const elapsed = Date.now() - this.createdAt;
+        return (this.lifespan - elapsed) / 1000;
     }
-    scoreElement.textContent = 'Score: 0';
 
-    if (obstacleInterval) clearInterval(obstacleInterval);
-    if (specialWallInterval) clearInterval(specialWallInterval);
+    update(game) { // Pass game object for area context
+        if (this.isHeld) return;
 
-    spawnObstacle();
-    obstacleInterval = setInterval(spawnObstacle, 10000);
-    specialWallInterval = setInterval(triggerSpecialWalls, 30000);
+        this.x += this.vx;
+        this.y += this.vy;
 
-    if (gameLoopId) cancelAnimationFrame(gameLoopId);
-    gameLoop();
-}
+        // Inertia/friction
+        this.vx *= 0.99;
+        this.vy *= 0.99;
 
-function gameLoop() {
-    if (!gameRunning || gameOver) {
-        cancelAnimationFrame(gameLoopId);
-        return;
-    }
-    update();
-    draw();
-    gameLoopId = requestAnimationFrame(gameLoop);
-}
-
-function triggerSpecialWalls() {
-    const count = Math.floor(Math.random() * 2) + 1;
-    for (let i = 0; i < count; i++) {
-        spawnSpecialWall();
-    }
-}
-
-function update() {
-    if (keys['w'] || keys['ArrowUp']) player.y -= player.speed;
-    if (keys['s'] || keys['ArrowDown']) player.y += player.speed;
-    if (keys['a'] || keys['ArrowLeft']) player.x -= player.speed;
-    if (keys['d'] || keys['ArrowRight']) player.x += player.speed;
-
-    if (player.x - player.radius < 0) player.x = player.radius;
-    if (player.x + player.radius > canvasWidth) player.x = canvasWidth - player.radius;
-    if (player.y - player.radius < 0) player.y = player.radius;
-    if (player.y + player.radius > canvasHeight) player.y = canvasHeight - player.radius;
-
-    obstacles.forEach(o => {
-        if (o.trapped) {
-            o.x += o.dx; o.y += o.dy;
-            const wall = o.trappedBy;
-            if (o.x - o.radius < wall.x || o.x + o.radius > wall.x + wall.width) { o.dx *= -1; o.x += o.dx; }
-            if (o.y - o.radius < wall.y || o.y + o.radius > wall.y + wall.height) { o.dy *= -1; o.y += o.dy; }
+        if (this.safe) {
+            const area = this.color === COLORS.RED ? game.redArea : game.blueArea;
+            // Keep heart within its safe area boundaries
+            if (this.x - this.size / 2 < area.x || this.x + this.size / 2 > area.x + area.width) {
+                this.vx *= -1;
+                this.x = Math.max(area.x + this.size / 2, Math.min(this.x, area.x + area.width - this.size / 2));
+            }
+            if (this.y - this.size / 2 < area.y || this.y + this.size / 2 > area.y + area.height) {
+                this.vy *= -1;
+                this.y = Math.max(area.y + this.size / 2, Math.min(this.y, area.y + area.height - this.size / 2));
+            }
         } else {
-            o.x += o.dx; o.y += o.dy;
-            if (o.x - o.radius < 0 || o.x + o.radius > canvasWidth) o.dx *= -1;
-            if (o.y - o.radius < 0 || o.y + o.radius > canvasHeight) o.dy *= -1;
-            specialWalls.forEach(sw => {
-                if (o.x + o.radius > sw.x && o.x - o.radius < sw.x + sw.width && o.y > sw.y && o.y < sw.y + sw.height) { o.dx *= -1; o.x += o.dx * 2; }
-                if (o.y + o.radius > sw.y && o.y - o.radius < sw.y + sw.height && o.x > sw.x && o.x < sw.x + sw.width) { o.dy *= -1; o.y += o.dy * 2; }
-            });
+            // Original wall bouncing for non-safe hearts
+            if (this.x - this.size / 2 < 0 || this.x + this.size / 2 > STAGE_WIDTH) {
+                this.vx *= -1;
+                this.x = Math.max(this.size / 2, Math.min(this.x, STAGE_WIDTH - this.size / 2));
+            }
+            if (this.y - this.size / 2 < 0 || this.y + this.size / 2 > STAGE_HEIGHT) {
+                this.vy *= -1;
+                this.y = Math.max(this.size / 2, Math.min(this.y, STAGE_HEIGHT - this.size / 2));
+            }
         }
-    });
-
-    score++;
-    scoreElement.textContent = `Score: ${score}`;
-    checkCollisions();
-}
-
-function draw() {
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const topCurveHeight = player.size * 0.3;
-    ctx.moveTo(player.x, player.y + topCurveHeight);
-    ctx.bezierCurveTo(player.x, player.y, player.x - player.size / 2, player.y, player.x - player.size / 2, player.y + topCurveHeight);
-    ctx.bezierCurveTo(player.x - player.size / 2, player.y + (player.size + topCurveHeight) / 2, player.x, player.y + (player.size + topCurveHeight) / 2, player.x, player.y + player.size);
-    ctx.bezierCurveTo(player.x, player.y + (player.size + topCurveHeight) / 2, player.x + player.size / 2, player.y + (player.size + topCurveHeight) / 2, player.x + player.size / 2, player.y + topCurveHeight);
-    ctx.bezierCurveTo(player.x + player.size / 2, player.y, player.x, player.y, player.x, player.y + topCurveHeight);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1;
-    obstacles.forEach(o => { ctx.beginPath(); ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2); ctx.stroke(); });
-    specialWalls.forEach(sw => { ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.strokeRect(sw.x, sw.y, sw.width, sw.height); });
-}
-
-startButton.addEventListener('click', init);
-restartButton.addEventListener('click', setupInitialScreen);
-
-window.addEventListener('keydown', (e) => { keys[e.key] = true; });
-window.addEventListener('keyup', (e) => { keys[e.key] = false; });
-
-// Touch controls for drag movement
-// Touch controls for drag movement
-// canvas.addEventListener('touchstart', (e) => {
-//     e.preventDefault();
-//     if (!gameRunning) return; // Only allow drag if game is running
-//     const touch = e.touches[0];
-//     const rect = canvas.getBoundingClientRect();
-//     touchStartX = touch.clientX - rect.left;
-//     touchStartY = touch.clientY - rect.top;
-// });
-
-// canvas.addEventListener('touchmove', (e) => {
-//     e.preventDefault();
-//     if (touchStartX === null || !gameRunning) return;
-//     const touch = e.touches[0];
-//     const rect = canvas.getBoundingClientRect();
-//     const currentX = touch.clientX - rect.left;
-//     const currentY = touch.clientY - rect.top;
-//     player.x += currentX - touchStartX;
-//     player.y += currentY - touchStartY;
-//     touchStartX = currentX;
-//     touchStartY = currentY;
-// });
-
-// canvas.addEventListener('touchend', (e) => { e.preventDefault(); touchStartX = null; touchStartY = null; });
-
-// Touch controls for buttons
-function setupButtonListeners(button, key) {
-    button.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (!gameRunning) return;
-        keys[key] = true;
-    });
-    button.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        keys[key] = false;
-    });
-    button.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        if (!gameRunning) return;
-        keys[key] = true;
-    });
-    button.addEventListener('mouseup', (e) => {
-        e.preventDefault();
-        keys[key] = false;
-    });
-    button.addEventListener('mouseleave', (e) => { // For desktop mouse drag off button
-        if (keys[key]) keys[key] = false;
-    });
-}
-
-setupButtonListeners(upButton, 'w');
-setupButtonListeners(downButton, 's');
-setupButtonListeners(leftButton, 'a');
-setupButtonListeners(rightButton, 'd');
-
-function spawnObstacle() {
-    let x, y, radius = 4;
-    do { x = Math.random() * (canvasWidth - radius * 2) + radius; y = Math.random() * (canvasHeight - radius * 2) + radius; } while (isSpawningOnSomething(x, y, radius));
-    const angle = Math.random() * 2 * Math.PI;
-    obstacles.push({ x, y, radius, dx: Math.cos(angle) * 2, dy: Math.sin(angle) * 2, trapped: false, trappedBy: null });
-}
-
-function spawnSpecialWall() {
-    let width = 50, height = 50;
-    let x, y, attempts = 0;
-    do { x = Math.random() * (canvasWidth - width); y = Math.random() * (canvasHeight - height); attempts++; if (attempts > 50) return; } while (isSpawningOnSomething(x, y, 0, { x, y, width, height }));
-    const wall = { x, y, width, height, trappedObstacles: [] };
-    obstacles.forEach(o => {
-        if (!o.trapped && o.x > wall.x && o.x < wall.x + wall.width && o.y > wall.y && o.y < wall.y + wall.height) {
-            o.trapped = true; o.trappedBy = wall; wall.trappedObstacles.push(o);
-        }
-    });
-    specialWalls.push(wall);
-    setTimeout(() => {
-        wall.trappedObstacles.forEach(o => { o.trapped = false; o.trappedBy = null; });
-        specialWalls = specialWalls.filter(sw => sw !== wall);
-    }, 10000);
-}
-
-function isSpawningOnSomething(x, y, radius, rect) {
-    const buffer = 20;
-    if (player && Math.hypot(x - player.x, y - player.y) < (radius || 0) + player.radius + buffer) return true;
-    for (const o of obstacles) { if (Math.hypot(x - o.x, y - o.y) < (radius || 0) + o.radius) return true; }
-    for (const sw of specialWalls) {
-        if (rect) { if (x < sw.x + sw.width && x + rect.width > sw.x && y < sw.y + sw.height && y + rect.height > sw.y) return true; }
-        else { if (x > sw.x - radius && x < sw.x + sw.width + radius && y > sw.y - radius && y < sw.y + sw.height + radius) return true; }
     }
-    return false;
-}
 
-function checkCollisions() {
-    for (const o of obstacles) { if (Math.hypot(player.x - o.x, player.y - o.y) < player.radius + o.radius) { endGame(); return; } }
-    for (const sw of specialWalls) {
-        let testX = player.x, testY = player.y;
-        if (player.x < sw.x) testX = sw.x; else if (player.x > sw.x + sw.width) testX = sw.x + sw.width;
-        if (player.y < sw.y) testY = sw.y; else if (player.y > sw.y + sw.height) testY = sw.y + sw.height;
-        if (Math.hypot(player.x - testX, player.y - testY) < player.radius) {
-            const overlapX = player.radius - Math.abs(player.x - testX);
-            const overlapY = player.radius - Math.abs(player.y - testY);
-            if (player.x < sw.x) player.x -= overlapX; else if (player.x > sw.x + sw.width) player.x += overlapX;
-            if (player.y < sw.y) player.y -= overlapY; else if (player.y > sw.y + sw.height) player.y += overlapY;
+    draw(ctx) {
+        const remainingTime = this.getRemainingTime();
+        let displayColor = this.color;
+
+        // Blinking effect when time is low and not safe
+        if (!this.safe && remainingTime <= 5) {
+            const blinkSpeed = 1 + (5 - remainingTime); // Faster as time runs out
+            if (Math.floor(Date.now() / (1000 / blinkSpeed)) % 2 === 0) {
+                displayColor = COLORS.WHITE;
+            }
         }
+
+        ctx.font = `${this.size * 2}px ${FONT_FAMILY}`;
+        ctx.fillStyle = displayColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('♡', this.x, this.y);
     }
 }
 
-function endGame() {
-    gameRunning = false;
-    gameOver = true;
-    finalScoreElement.textContent = score;
-    gameOverElement.style.display = 'block';
-    canvas.style.display = 'none';
-    scoreElement.style.display = 'none';
-    if (isMobile()) {
-        touchControlsElement.style.display = 'none';
+class Game {
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.gameState = 'start'; // 'start', 'countdown', 'playing', 'gameover'
+        this.hearts = [];
+        this.heldHeart = null;
+        this.score = 0;
+        this.highScore = parseInt(localStorage.getItem('heartSurvivorHighScore') || '0');
+        this.spawnCounter = 0;
+        this.lastSpawnTime = 0;
+        this.countdownValue = 3;
+        this.gameOverStopTime = 0;
+        this.lastCountdownTime = 0;
+        this.explodingHeart = null;
+
+        this.redArea = { x: 0, y: STAGE_HEIGHT / 2 - 150, width: 100, height: 300 };
+        this.blueArea = { x: STAGE_WIDTH - 100, y: STAGE_HEIGHT / 2 - 150, width: 100, height: 300 };
+        this.upperSpawn = { x: STAGE_WIDTH / 2 - 50, y: 0, width: 100, height: 50 };
+        this.lowerSpawn = { x: STAGE_WIDTH / 2 - 50, y: STAGE_HEIGHT - 50, width: 100, height: 50 };
+
+        this.isShiftDown = false;
+        this.mousePos = { x: 0, y: 0 };
+        this.initEventListeners();
     }
-    clearInterval(obstacleInterval);
-    clearInterval(specialWallInterval);
+
+    initEventListeners() {
+        canvas.addEventListener('click', () => {
+            if (this.gameState === 'start') {
+                this.startCountdown();
+            } else if (this.gameState === 'gameover' && Date.now() - this.gameOverStopTime > 3000) { // Allow restart after 3 seconds
+                this.resetGame();
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Shift' && !this.isShiftDown) {
+                this.isShiftDown = true;
+                this.grabHeart();
+            } else if (this.gameState === 'gameover' && Date.now() - this.gameOverStopTime > 3000) { // Allow restart after 3 seconds
+                this.resetGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'Shift') {
+                this.isShiftDown = false;
+                this.releaseHeart();
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            this.mousePos.x = e.clientX - rect.left;
+            this.mousePos.y = e.clientY - rect.top;
+        });
+    }
+
+    startCountdown() {
+        this.gameState = 'countdown';
+        this.countdownValue = 3;
+        this.lastCountdownTime = Date.now();
+    }
+
+    grabHeart() {
+        if (this.gameState !== 'playing' || this.heldHeart) return;
+        // Find the closest heart to the mouse
+        let closestHeart = null;
+        let minDistance = Infinity;
+
+        for (let i = this.hearts.length - 1; i >= 0; i--) {
+            const heart = this.hearts[i];
+            const dx = heart.x - this.mousePos.x;
+            const dy = heart.y - this.mousePos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            // Only allow grabbing if not already safe
+            if (!heart.safe && distance < heart.size * 2 && distance < minDistance) {
+                closestHeart = heart;
+                minDistance = distance;
+            }
+        }
+
+        if (closestHeart) {
+            this.heldHeart = closestHeart;
+            this.heldHeart.isHeld = true;
+        }
+    }
+
+    releaseHeart() {
+        if (this.heldHeart) {
+            const releasedHeart = this.heldHeart;
+            releasedHeart.isHeld = false;
+            // Apply some inertia from mouse movement
+            releasedHeart.vx += (this.mousePos.x - releasedHeart.x) * 0.1;
+            releasedHeart.vy += (this.mousePos.y - releasedHeart.y) * 0.1;
+            this.heldHeart = null;
+
+            // Check for incorrect placement immediately on release
+            const inRedArea = releasedHeart.x > this.redArea.x && releasedHeart.x < this.redArea.x + this.redArea.width &&
+                              releasedHeart.y > this.redArea.y && releasedHeart.y < this.redArea.y + this.redArea.height;
+            const inBlueArea = releasedHeart.x > this.blueArea.x && releasedHeart.x < this.blueArea.x + this.blueArea.width &&
+                               releasedHeart.y > this.blueArea.y && releasedHeart.y < this.blueArea.y + this.blueArea.height;
+
+            if ((releasedHeart.color === COLORS.RED && inBlueArea) || (releasedHeart.color === COLORS.BLUE && inRedArea)) {
+                this.triggerGameOver(releasedHeart);
+            } else if ((releasedHeart.color === COLORS.RED && inRedArea) || (releasedHeart.color === COLORS.BLUE && inBlueArea)) {
+                const elapsedTime = Date.now() - releasedHeart.createdAt;
+                if (elapsedTime < 5000) { // 5 seconds for bonus
+                    this.score += 200; // Double points
+                } else {
+                    this.score += 100; // Standard points
+                }
+            }
+        }
+    }
+
+    spawnHearts() {
+        const now = Date.now();
+        if (now - this.lastSpawnTime < 5000) return;
+
+        this.lastSpawnTime = now;
+        this.spawnCounter++;
+
+        let upperSpawnCount = 0;
+        let lowerSpawnCount = 0;
+
+        if (this.spawnCounter <= 3) {
+            upperSpawnCount = 1;
+        } else if (this.spawnCounter <= 5) {
+            upperSpawnCount = 2;
+        } else if (this.spawnCounter <= 10) {
+            upperSpawnCount = 2;
+            lowerSpawnCount = 1;
+        } else {
+            const baseUpper = 3;
+            const baseLower = 1;
+            const increment = Math.floor((this.spawnCounter - 11) / 5);
+            upperSpawnCount = baseUpper + increment;
+            lowerSpawnCount = baseLower + increment;
+        }
+
+        for (let i = 0; i < upperSpawnCount; i++) {
+            this.hearts.push(new Heart(
+                getRandom(this.upperSpawn.x, this.upperSpawn.x + this.upperSpawn.width),
+                getRandom(this.upperSpawn.y, this.upperSpawn.y + this.upperSpawn.height),
+                getRandomColor()
+            ));
+        }
+        for (let i = 0; i < lowerSpawnCount; i++) {
+            this.hearts.push(new Heart(
+                getRandom(this.lowerSpawn.x, this.lowerSpawn.x + this.lowerSpawn.width),
+                getRandom(this.lowerSpawn.y, this.lowerSpawn.y + this.lowerSpawn.height),
+                getRandomColor()
+            ));
+        }
+    }
+
+    update() {
+        const now = Date.now();
+
+        if (this.gameState === 'playing') {
+            this.hearts.forEach(heart => heart.update(this)); // Pass game object for area context
+
+            if (this.heldHeart) {
+                this.heldHeart.x = this.mousePos.x;
+                this.heldHeart.y = this.mousePos.y;
+            }
+
+            this.spawnHearts();
+            this.updateHeartSafety();
+            this.checkGameOver();
+            // this.checkAreaClear(); // Removed as per user request
+        } else if (this.gameState === 'countdown') {
+            if (now - this.lastCountdownTime > 1000) {
+                this.countdownValue--;
+                this.lastCountdownTime = now;
+                if (this.countdownValue <= 0) {
+                    this.gameState = 'playing';
+                    this.lastSpawnTime = now;
+                }
+            }
+        } else if (this.gameState === 'gameover') {
+            // No update needed, waiting for user click
+        }
+    }
+
+    triggerGameOver(explodingHeart) {
+        this.gameState = 'gameover';
+        this.explodingHeart = explodingHeart;
+        this.gameOverStopTime = Date.now();
+        // Freeze all other hearts
+        this.hearts.forEach(h => {
+            h.vx = 0;
+            h.vy = 0;
+        });
+
+        // Update high score
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('heartSurvivorHighScore', this.highScore);
+        }
+    }
+
+    checkGameOver() {
+        for (const heart of this.hearts) {
+            if (!heart.safe && heart.getRemainingTime() <= 0) { // Check if heart is not safe
+                this.triggerGameOver(heart);
+                return;
+            }
+        }
+    }
+
+    checkAreaClear() {
+        // This method is now empty to prevent freezing.
+    }
+
+    updateHeartSafety() {
+        this.hearts.forEach(heart => {
+            if (heart.isHeld) {
+                heart.safe = false;
+                return;
+            }
+
+            const inRedArea = heart.x > this.redArea.x && heart.x < this.redArea.x + this.redArea.width &&
+                              heart.y > this.redArea.y && heart.y < this.redArea.y + this.redArea.height;
+            const inBlueArea = heart.x > this.blueArea.x && heart.x < this.blueArea.x + this.blueArea.width &&
+                               heart.y > this.blueArea.y && heart.y < this.blueArea.y + this.blueArea.height;
+
+            if ((heart.color === COLORS.RED && inRedArea) || (heart.color === COLORS.BLUE && inBlueArea)) {
+                heart.safe = true;
+            } else {
+                heart.safe = false;
+            }
+        });
+    }
+
+
+    draw() {
+        // Clear canvas
+        this.ctx.fillStyle = COLORS.BLACK;
+        this.ctx.fillRect(0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+
+        if (this.gameState === 'start') {
+            this.drawStartScreen();
+            return;
+        }
+        
+        if (this.gameState === 'gameover') {
+            this.drawGameOver();
+            return;
+        }
+
+        // Draw areas and spawners
+        this.drawZones();
+        
+        // Draw hearts
+        this.hearts.forEach(heart => heart.draw(this.ctx));
+
+        // Draw countdown
+        if (this.gameState === 'countdown') {
+            this.ctx.fillStyle = COLORS.WHITE;
+            this.ctx.font = `100px ${FONT_FAMILY}`;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            const text = this.countdownValue > 0 ? this.countdownValue : 'スタート！';
+            this.ctx.fillText(text, STAGE_WIDTH / 2, STAGE_HEIGHT / 2);
+        }
+    }
+    
+    drawZones() {
+        // Red Area
+        this.ctx.fillStyle = COLORS.RED_AREA;
+        this.ctx.fillRect(this.redArea.x, this.redArea.y, this.redArea.width, this.redArea.height);
+        // Blue Area
+        this.ctx.fillStyle = COLORS.BLUE_AREA;
+        this.ctx.fillRect(this.blueArea.x, this.blueArea.y, this.blueArea.width, this.blueArea.height);
+
+        // Spawner outlines
+        this.ctx.strokeStyle = COLORS.WHITE;
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.upperSpawn.x, this.upperSpawn.y, this.upperSpawn.width, this.upperSpawn.height);
+        this.ctx.strokeRect(this.lowerSpawn.x, this.lowerSpawn.y, this.lowerSpawn.width, this.lowerSpawn.height);
+    }
+
+    drawStartScreen() {
+        this.ctx.fillStyle = COLORS.WHITE;
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+
+        this.ctx.font = `48px ${FONT_FAMILY}`;
+        this.ctx.fillText('タッチしてスタート', STAGE_WIDTH / 2, STAGE_HEIGHT / 2 - 80);
+
+        this.ctx.font = `24px ${FONT_FAMILY}`;
+        this.ctx.fillText('カーソルをハートに合わせて', STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 20);
+        this.ctx.fillText('SHIFTボタンで掴む', STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 60);
+        this.ctx.fillText('SHIFTボタンを離して放す', STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 100);
+    }
+
+    drawGameOver() {
+        const now = Date.now();
+        const elapsed = now - this.gameOverStopTime;
+
+        // Draw the game state as it was at the moment of explosion
+        this.drawZones();
+        this.hearts.forEach(heart => {
+            if (heart === this.explodingHeart) {
+                this.ctx.font = `${heart.size * 3}px ${FONT_FAMILY}`;
+                this.ctx.fillStyle = heart.color; // Use the heart's actual color
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('×', heart.x, heart.y);
+            } else {
+                heart.draw(this.ctx);
+            }
+        });
+        this.ctx.fillStyle = COLORS.WHITE;
+        this.ctx.font = `24px ${FONT_FAMILY}`;
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'top';
+
+        // After 3 seconds, show game over text
+        if (elapsed > 3000) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            this.ctx.fillRect(0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+            
+            this.ctx.fillStyle = COLORS.WHITE;
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            this.ctx.font = `80px ${FONT_FAMILY}`;
+            this.ctx.fillText('ゲームオーバー', STAGE_WIDTH / 2, STAGE_HEIGHT / 2 - 50);
+
+            this.ctx.font = `40px ${FONT_FAMILY}`;
+            this.ctx.fillText(`SCORE: ${this.score}`, STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 20);
+            this.ctx.fillText(`HIGH SCORE: ${this.highScore}`, STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 70);
+
+            this.ctx.font = `24px ${FONT_FAMILY}`;
+            this.ctx.fillText('クリックまたは任意のキーで再スタート', STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 150);
+        }
+    }
+
+    resetGame() {
+        this.gameState = 'start';
+        this.hearts = [];
+        this.heldHeart = null;
+        this.score = 0;
+        this.spawnCounter = 0;
+        this.lastSpawnTime = 0;
+        this.countdownValue = 3;
+        this.gameOverStopTime = 0;
+        this.lastCountdownTime = 0;
+        this.explodingHeart = null;
+    }
+
+    loop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
 }
 
-// Initial load
-setupInitialScreen();
+// --- Main Execution ---
+const game = new Game(ctx);
+game.loop();
