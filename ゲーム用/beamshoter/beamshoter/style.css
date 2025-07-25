@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Press Start 2P', monospace;
+}
+
+#gameCanvas {
+  display: block;
+  margin: 0 auto;
+  background: #000;
+  border: 4px solid #fff;
+  box-sizing: border-box;
+}
+
+#mobile-controls {
+  user-select: none;
+}
+
+@media (max-width: 900px) {
+  #gameCanvas {
+    margin-bottom: 90px;
+  }
+} 
